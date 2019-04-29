@@ -1,0 +1,61 @@
+---
+title: "LSA"
+author: "Daniel Smith"
+date: "4/15/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(gplots)
+library(tidyverse)
+library(LSAfun)
+library(tm)
+library(twitteR)
+library(tidytext)
+library(gplots)
+#load data 
+load("climatechange_health.RData")
+```
+
+```{r cleaning}
+#clean data 
+
+#Make data frame of ALL tweets 
+climatechange_health.df <-twListToDF(climatechange_health)
+#Strip retweets and make data frame of "pure" tweets.  
+climatechange_health_noRT.df <-twListToDF(strip_retweets(climatechange_health))
+#Cleaning the climate change & health tweets
+# remove http elements from heatillness & health tweets
+climatechange_health_noRT.df$stripped_text <- gsub("http.*","",  climatechange_health_noRT.df$text)
+climatechange_health_noRT.df$stripped_text <- gsub("https.*","",  climatechange_health_noRT.df$text)
+cc.corpus <- climatechange_health_noRT.df
+#save as .txt
+write.table(cc.corpus,"climatechange.txt",sep="\t",row.names=FALSE)
+#make corpus
+corpus <- Corpus(VectorSource(cc.corpus))
+#create stopword vector 
+stoplist <-c(stopwords("en"), "xx", "xxxx","xx/xx/xxxx","xxxx/xxxx/", "xxxxxxxxxxxx","xxxxxxxx")
+#Create Term Document Matrix
+tdm <- TermDocumentMatrix(corpus,
+control=list(removePunctuation = TRUE, removeNumbers = TRUE,
+tolower = TRUE,
+stopwords = stoplist,
+stemming = TRUE, # snowball stemmer
+weighting = function(x) weightTfIdf(x, normalize = FALSE))) # Keep only 5 or more appearances, to accelerate
+#the matrix is very sparse
+tdm
+#find term frequencies 
+findFreqTerms(tdm, 300)
+#further analysis of the word "climate"
+myLSAspace <- lsa(tdm, dims=dimcalc_share())
+dim(myLSAspace$tk)  # Check how many rows/columns the tk matrix has  
+myLSAtk = t(myLSAspace$sk * t(myLSAspace$tk)) 
+plot_neighbors("health",n=30,tvectors=myLSAtk[,1:2])  # Use only the first 2 dimensions 
+#heatmap time 
+#extract closest words to climate 
+words <- neighbors("health", n=30,tvectors= myLSAtk[,1:2])
+#extract words and find the distances in space. 
+myCosineSpace2 <- multicos(names(words), tvectors= myLSAtk[,1:2], breakdown=TRUE)
+heatmap.2(myCosineSpace2)
+```

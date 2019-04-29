@@ -1,0 +1,667 @@
+---
+title: "Using Twitter for Nursing Research: A Tweet Analysis on Climate Change, Global Warming, Heat Related Illness, and Health"
+author: "Daniel Smith"
+date: "5/1/2019"
+output:
+  word_document: default
+  html_document:
+    always_allow_html: yes
+  pdf_document:
+    fig_caption: yes
+csl: apa.csl
+bibliography: bibliography.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(include = FALSE, warning = FALSE, message = FALSE, fig.width = 5, fig.height = 4, fig.pos = 'h', dpi = 1200)
+#load needed packages
+library(tidyverse)
+library(twitteR)
+library(tidytext)
+library(tidyr)
+library(ggraph)
+library(igraph)
+library(syuzhet)
+library(LSAfun)
+library(tm)
+library(gplots)
+#load needed data
+load("climatechange_health.RData")
+load("globalwarming_health.RData")
+load("heatillness_health.RData")
+```
+
+## Introduction
+
+Climate change is a topic of dicussion in a plethora of disciplines and as environmental health researchers and nurses, we often see first hand the effects that climate change has on individuals' lives and health.The pathways in which climate change impact human health are complex and some examples include undernuritrion, increased temepratures leading to increases in vector-borne disease and increases in heat-related illness, and increases in air pollution causing more cadriovascular and respiratory disease [@Watts2017; @Orru2017; @Heaviside2016]. However, as a term, 'climate change' encompasses the multiple ways in which the Earth's climate is changing. Climate change can involve increasing instances of extremem events (i.e. hurricanes and polar vorteces), increasing average global temperatures, decreasing ice caps, increasing sea levels, increasing levels or carbon dioxide in the atmosphere, increasing droughts, and changes in the amount of percipitation a region of the Earth receives [@Shaftel2019]. Given the many different parts that make up climate change, it is evident that multiple different conversations are happening within the climate change sphere. 
+
+Global warming is one piece of climate change that is particularly worrisome to the health of different populations around the globe. Heat waves from global warming will impact people with chronic disease. For example, people with hypertension, heart disase, diabetes, or asthma are at a greater risk for suffering complicaitons related to their disease due to excess temperatures [@Rossati2017]. One study in Korea found that heat waves were associated with a 14% increase in out-of-hosiptal-cardiac arrest [@Kang2016]. However, the effects of increased heat are not just limited to the general population. Outdoor occupational groups, such as construction workers, miners, and agricultural workers, are particularly vulnerable to the impacts of increasing termperatures [@Levi2018; @Hunt2014; @Fleischer2013]. As global temperatures continue to increase, heat-related illness is expected to become more common in outdoor workers. Studies have shown that heat-strain and dehydration cause agricultural workers to experience acute kidney injury during shifts [@Mix2018; @Moyce2017; @Moyce2016]. Annually, farmworkers within the United States also experience heat-related deaths 20x the rate of the US civilian-workforce [@Jackson2010].
+
+In order to better understand the nature of the conversations surrounding climate change and health on social media, this study will utilize Twitter (a social media site that allows users to tweet messages of 240 characters or less) to characterize and analyze the differences between tweets at various levels of the climate change conversation. Twitter has proved useful in many health related studies through content analysis, surveillance, study recruitment, intervention delivery, and network analysis [@Sinnenberg2017]. This analysis will focus on content analysis of tweets through sentiment analysis (a metrif for evaluating the opinions expresed within text as either positive or negative) and word networks within tweets. A comparison of word frequencies between the three groups will also be conducted. Keywords for identifying tweets from each group to be included in the analysis are 'climate change + health', 'global warming + health', and 'heat illness + health'. 
+ 
+## Methods
+
+Data for this project was acquired from http://twitter.com and were acquired through Daniel Smith's API account. All tweets were acquired on March 20, 2019, using the functions of the `twitteR` package. 
+
+```{r link_to_twitter, eval=FALSE}
+#Connect R to twitter.com with API information 
+#First, API information is entered into R as vectors. 
+api_key <- "sbUlW5AkRQtN9j9qj9BuW13tn"
+api_secret <- "Oql2n57GRzfDmvUWYdOy9BJxq5kwPdK77KC0EKIxMOpOUO61gl"
+access_token <- "906672440-UZYZCHBALNuo5Qt0Fg15bWH3AMq6WxJnaxqkT0rp"
+access_token_secret <- "UfYImM6LN1PeXuJtPN6RIlK8Zz9mRQa1pHsDAf9bOuUbw"
+#Second, connect R to twitter
+setup_twitter_oauth(api_key, api_secret, access_token, access_token_secret)
+```
+
+Key words/phrases were used to query tweets about climate change and health across multiple levels of the climate change spectrum. Starting with the idea of 'climate change', the keywords used to query tweets were 'climate change + health'. Using the idea of 'global warming', keywords used in the query were 'global warming + health'. Finally, to query tweets about heat illness, the keywords utilized in the search were 'heat illness + health'. Using n=10000 and waiting for 10 minutes between requests form the API to avoide being rate limited  were requested for each of the search terms. Tweets were also limited to the English Language.  
+
+```{r tweets, eval=FALSE}
+#This code chunk was only ran once on March 20, 2019, to prevent R from pulling new tweets each time the documented was knitted into an output file.
+
+#Search for tweets that contain the phrase 'climate change' only. 
+climatechange <- c(searchTwitter("climate change", n=10000, lang = "en"))
+#save data as .Rdata
+save(climatechange, file="climatechange.RData")
+#Make R wait before running the next set of tweets so that being 'rate limited' is avoided 
+Sys.sleep(600)
+
+#Search for tweets that contain the phrase 'global warming' only. 
+globalwarming <- c(searchTwitter("global warming", n=10000, lang = "en"))
+#save data as .Rdata
+save(globalwarming, file="globalwarming.RData")
+#Make R wait before running the next set of tweets so that being 'rate limited' is avoided 
+Sys.sleep(600)
+
+#Search for tweets that contain the phrase 'heat illness' only. 
+heatillness <- c(searchTwitter("heat illness", n=10000, lang = "en"))
+#save data as .Rdata
+save(heatillness, file="heatillness.RData")
+#Make R wait before running the next set of tweets so that being 'rate limited' is avoided 
+Sys.sleep(600)
+
+#Search for tweets that contain the phrases described above + health. 
+
+#Search for 'climate change+health'. 
+climatechange_health<- c(searchTwitter("climate change+health", n=10000, lang = "en"))
+#save data as .Rdata
+save(climatechange_health, file="climatechange_health.RData")
+#Make R wait before running the next set of tweets so that being 'rate limited' is avoided 
+Sys.sleep(600)
+
+#Search for 'global warming+health'.
+globalwarming_health <- c(searchTwitter("global warming+health", n=10000, lang = "en"))
+#save data as .Rdata
+save(globalwarming_health, file="globalwarming_health.RData")
+#Make R wait before running the next set of tweets so that being 'rate limited' is avoided 
+Sys.sleep(600)
+
+#Search for 'heat illness+health'. 
+heatillness_health <- c(searchTwitter("heat illness+health", n=10000, lang = "en"))
+#save data as .Rdata
+save(heatillness_health, file="heatillness_health.RData")
+```
+
+```{r strip_retweets, cache=TRUE}
+#Make data frame of ALL tweets 
+climatechange_health.df <-twListToDF(climatechange_health)
+#Make a data frame form ALL tweets 
+globalwarming_health.df <-twListToDF(globalwarming_health)
+#Make a data frame from ALL tweets
+heatillness_health.df <-twListToDF(heatillness_health)
+
+#remove retweets
+#Strip retweets and make data frame of "pure" tweets.  
+climatechange_health_noRT.df <-twListToDF(strip_retweets(climatechange_health))
+#Strip retweets and make data frame of "pure" tweets.  
+globalwarming_health_noRT.df <-twListToDF(strip_retweets(globalwarming_health))
+#Strip retweets and make data frame of "pure" tweets.  
+heatillness_health_noRT.df <-twListToDF(strip_retweets(heatillness_health))
+```
+
+### Cleaning 
+
+Before analysis of tweets can occur, @Yang2018 suggests that tweets should be converted to all lower case, have links, punctuation and stopwords removed. Stop words are words such as 'a' and 'to' that are not meaningful in the textual analysis. @Yang2018 also suggests removing usernames from tweets, However, given the topic and that certain politicians and other individuals are often known to tweet about "controlversial" topics such as climate change and global warming, usernames were only removed during sentiment analysis. In order to clean the tweets, the package `tidytext` was used and tweets were cleaned/pre-processed individually for each analysis step. For each step, a list of "pure" tweets was used (i.e. retweets that were extracted through the API were removed leaving only original tweets).
+
+For **term frequency** analysis, tweets were converted to lower case, punctuation removed, stop words removed, URLs removed, and unique IDs were assigned to each word in the tweets. When counting freuqencies of words, it is important that all words are converted to lower case as "low" and "Low" would be counted as two separate words [@Yang2018]. For **word network** analysis, tweets were converted to lower case, punctuation removed, stop words removed, URLs removed, unique IDs were assigned to each word, and bigrams (a pair of consecutive written units) had to be identified and counted. The cleaning for **sentiment analysis** of the tweets varied when compared to the other two analyses above. The cleaning/preprocessing of tweets included maintaing the upper and lower case structure of the tweets, not removing punctuation nor stopwords, but URLs, usernames, and hashtags were removed. This was done to preserve the original writing of the text that is important for sentiment analysis [@Yang2018]. Finally, for the "climate change & health" tweets, **latent sentiment analysis** was performed. To do so, tweets were cleaned by removing all URLS and stopwords. All words were also lemmatized.
+
+
+### Packages
+
+#### Term Frequency, Word Networks, and Sentiment Analysis. 
+
+For each category of tweets, the top 15 appearing words were analyzed using `tidytext`, word networks were created using `igraph` and `ggraph`, and sentiment analysis was conducted using  `syuzhet`. The function `get_nrc_sentiment` extracts sentiment using the NRC Word-Emotion Assocation Lexicon (need to cite: https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html). This package assigns each word to 1 of 8 emotions (i.e. anger, fear, anticipation, trust, surprise, sadness, joy and disgust) and 1 of 2 sentiments (i.e. positive or negative). Tweets that are considered positive have a sentiment score of >0, neutral tweets have a sentiment score equal to 0, and negative tweets have a sentiment score of <0. 
+
+#### Latent Sentiment Analysis 
+
+For the 'climate change & health tweets', latent sentiment analysis was performed using the `LSAfun` and `tm` packages. 
+
+## Results
+
+In table 1, the number of tweets pulled for each set of keywords are presented. The keywords 'climate change & health' returned the most tweets with the requested number of 10,000 being returned. However, in each cateogory a significant portion of the total number of retweets returned were retweets. 
+
+```{r numbers}
+#make table with numbers of tweets in each category. 
+tweet.num <- c(nrow(climatechange_health.df), nrow(globalwarming_health.df), nrow(heatillness_health.df))
+#make table with numbers of tweets in each category with retweets removed. 
+tweet.num.nort <- c(nrow(climatechange_health_noRT.df), nrow(globalwarming_health_noRT.df), nrow(heatillness_health_noRT.df))
+#create matrix. 
+number.tweets <- rbind(tweet.num, tweet.num.nort)
+#create col names 
+colnames(number.tweets) <- c("Climate Change & Health", "Global Warming & Health", "Heat Illness & Health")
+#create row names
+rownames(number.tweets) <- c("Number of Tweets", "Number of Tweets Without Retweets")
+#print matrix 
+number.tweets
+```
+
+```{r table1, include=TRUE, echo=FALSE}
+#make table 
+number.tweets
+```
+
+### Term Frequencies
+
+```{r frequency, eval=TRUE}
+#Cleaning of tweets for frequency analysis 
+
+#Cleaning of the climate change & health tweets
+# remove http elements from heatillness & health tweets
+climatechange_health_noRT.df$stripped_text <- gsub("http.*","",  climatechange_health_noRT.df$text)
+climatechange_health_noRT.df$stripped_text <- gsub("https.*","",  climatechange_health_noRT.df$text)
+#Convert to lowercase, remove punctutation, and add unique ID for each occurance of a word in the tweets using `tidytext`. 
+climatechange_health_noRT_prelimclean.df <- climatechange_health_noRT.df %>%
+  dplyr::select(stripped_text) %>%
+  unnest_tokens(word, stripped_text)
+#Remove stop words from the tweets
+#First load the list of stop words form the tidytext package. 
+data("stop_words")
+#view the first 6 stop words
+head(stop_words)
+#view number of unique words in tweets with stopwords 
+nrow(climatechange_health_noRT_prelimclean.df)
+#Remove stopwords from tweets
+climatechange_health_noRT_clean.df <- climatechange_health_noRT_prelimclean.df %>%
+  anti_join(stop_words)
+#view number of unique words in tweets without stopwords
+nrow(climatechange_health_noRT_clean.df)
+
+#Cleaning the global wamring & health tweets
+# remove http elements from heatillness & health tweets
+globalwarming_health_noRT.df$stripped_text <- gsub("http.*","",  globalwarming_health_noRT.df$text)
+globalwarming_health_noRT.df$stripped_text <- gsub("https.*","",  globalwarming_health_noRT.df$text)
+#Convert to lowercase, remove punctutation, and add unique ID for each occurance of a word in the tweets using `tidytext`. 
+globalwarming_health_noRT_prelimclean.df <- globalwarming_health_noRT.df %>%
+  dplyr::select(stripped_text) %>%
+  unnest_tokens(word, stripped_text)
+#Remove stop words from the tweets
+#First load the list of stop words form the tidytext package. 
+data("stop_words")
+#view the first 6 stop words
+head(stop_words)
+#view number of unique words in tweets with stopwords 
+nrow(globalwarming_health_noRT_prelimclean.df)
+#Remove stopwords from tweets
+globalwarming_health_noRT_clean.df <- globalwarming_health_noRT_prelimclean.df %>%
+  anti_join(stop_words)
+#view number of unique words in tweets without stopwords
+nrow(globalwarming_health_noRT_clean.df)
+
+#Cleaning the heatillness & health tweets
+# remove http elements from heatillness & health tweets
+heatillness_health_noRT.df$stripped_text <- gsub("http.*","",  heatillness_health_noRT.df$text)
+heatillness_health_noRT.df$stripped_text <- gsub("https.*","", heatillness_health_noRT.df$stripped_text)
+#Convert to lowercase, remove punctutation, and add unique ID for each occurance of a word in the tweets using `tidytext`. 
+heatillness_health_noRT_prelimclean.df <- heatillness_health_noRT.df %>%
+  dplyr::select(stripped_text) %>%
+  unnest_tokens(word, stripped_text)
+#Remove stop words from the tweets
+#First load the list of stop words form the tidytext package. 
+data("stop_words")
+#view the first 6 stop words
+head(stop_words)
+#view number of unique words in tweets with stopwords 
+nrow(heatillness_health_noRT_prelimclean.df)
+#Remove stopwords from tweets
+heatillness_health_noRT_clean.df <- heatillness_health_noRT_prelimclean.df %>%
+  anti_join(stop_words)
+#view number of unique words in tweets without stopwords
+nrow(heatillness_health_noRT_clean.df)
+
+#plot the top 15 words from climatechange+health tweets
+cc.count <- (climatechange_health_noRT_clean.df %>%
+  count(word, sort = TRUE) %>%
+  top_n(15) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(x = word, y = n)) +
+  geom_col() +
+    coord_flip() +
+  xlab(NULL) +
+      labs(y = "Count",
+      x = "Unique words",
+     title = "Count of Unique Words",
+      subtitle = "Climate Change & Health Tweets"))
+#top tweet form cc.count 
+cc.top <- (climatechange_health_noRT_clean.df %>%
+  count(word, sort = TRUE) %>%
+  top_n(1))
+
+#plot the top 15 words from globalwarming+health tweets
+gw.count <- (globalwarming_health_noRT_clean.df %>%
+  count(word, sort = TRUE) %>%
+  top_n(15) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(x = word, y = n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+      labs(y = "Count",
+      x = "Unique words",
+      title = "Count of Unique Words",
+      subtitle = "Global Warming & Health Tweets"))
+#top tweet form gw.count 
+gw.top <- (globalwarming_health_noRT_clean.df %>%
+  count(word, sort = TRUE) %>%
+  top_n(1))
+
+#plot the top 15 words from heatillness+health tweets
+hi.count <- (heatillness_health_noRT_clean.df %>%
+  count(word, sort = TRUE) %>%
+  top_n(13) %>% #made 13, because lots of words were showing that only appeared 1 time. Due to small number of tweets. 
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(x = word, y = n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+      labs(y = "Count",
+      x = "Unique words",
+      title = "Count of Unique Words",
+      subtitle = "Heat Illness & Health Tweets"))
+#top tweet from hi.count 
+hi.top <- (heatillness_health_noRT_clean.df %>%
+  count(word, sort = TRUE) %>%
+  top_n(1)) #How to make this inline R code print out better?
+```
+
+```{r fig1, include=TRUE, echo=FALSE, fig.cap="Term Frequencies of Climate Change and Health Tweets"}
+#bar chart of climate change and helath tweets. 
+cc.count
+```
+
+```{r fig2, include=TRUE, echo=FALSE, fig.cap="Term Frequencies of Global Warming and Health Tweets"}
+#bar chart of global warming and health tweets
+gw.count
+```
+
+```{r fig3, include=TRUE, echo=FALSE, fig.cap="Term Frequencies of Heat Illness and Health Tweets"}
+#bar chart of heat illness and health tweets
+hi.count
+```
+
+The top 15 words in the tweets of "climate change & health" and "global warming & health" are show below. Due to the fewer number of tweets (and subsequent number of words) collected about "heat illness & health", the top 13 words are shown displaying on those words that had frequencies of 2 or higher. In Figure 1, the top 15 words from the 'Climate Change & Health' are presented. The top word in this set of tweets was '`r cc.top$word`' with `r cc.top$n` observations. In Figure 2, the top 15 words from the 'Global Warming & Health' tweets are presetned. The top word in this set of tweets was '`r gw.top$word`' with `r gw.top$n` observations. In Figure 3, the top 13 words from the 'Heat Illness & Health' tweets are presetned. The top words in this set of tweets were '`r hi.top$word`' with `r hi.top$n` observations each.
+
+
+### Word Networks. 
+```{r networks}
+#Word Network for "climate change & health"
+#Removepunctuation, convert to lowercase, add ID for each tweet. Also pair words. 
+climatechange_health_noRT_prelimpaired.df <- climatechange_health_noRT.df %>%
+  dplyr::select(stripped_text) %>%
+  unnest_tokens(paired_words, stripped_text, token = "ngrams", n = 2)
+#Bigram count
+climatechange_health_noRT_prelimpaired.df %>%
+  count(paired_words, sort = TRUE)
+#separate paired words 
+climatechange_health_noRT_separated.df <- climatechange_health_noRT_prelimpaired.df %>%
+  separate(paired_words, c("word1", "word2"), sep = " ")
+#remove stope workds 
+climatechange_health_noRT_filtered.df <- climatechange_health_noRT_separated.df %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+#new bigram count
+climatechange_health_noRT_networkcount.df <- climatechange_health_noRT_filtered.df %>%
+  count(word1, word2, sort = TRUE)
+#show top six
+head(climatechange_health_noRT_networkcount.df)
+#graph word network
+# plot climate change word network
+set.seed(123)
+cc.net <- (climatechange_health_noRT_networkcount.df %>%
+        filter(n >= 10) %>%
+        graph_from_data_frame() %>%
+        ggraph(layout = "fr") +
+        geom_edge_link(aes(edge_alpha = n, edge_width = n)) +
+        geom_node_point(color = "darkslategray4", size = 3) +
+        geom_node_text(aes(label = name), vjust = 1.8, size = 3) +
+        labs(title = "Word Network of Tweets", 
+             subtitle = "climate change & health",
+             x = "", y = ""))
+#top bigram
+cc.net.top <- (climatechange_health_noRT_networkcount.df %>%
+  top_n(1)) 
+
+#Word Network for "global warming & health"
+#Removepunctuation, convert to lowercase, add ID for each tweet. Also pair words. 
+globalwarming_health_noRT_prelimpaired.df <- globalwarming_health_noRT.df %>%
+  dplyr::select(stripped_text) %>%
+  unnest_tokens(paired_words, stripped_text, token = "ngrams", n = 2)
+#Bigram count
+globalwarming_health_noRT_prelimpaired.df %>%
+  count(paired_words, sort = TRUE)
+#separate paired words 
+globalwarming_health_noRT_separated.df <- globalwarming_health_noRT_prelimpaired.df %>%
+  separate(paired_words, c("word1", "word2"), sep = " ")
+#remove stope workds 
+globalwarming_health_noRT_filtered.df <- globalwarming_health_noRT_separated.df %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+#new bigram count
+globalwarming_health_noRT_networkcount.df <- globalwarming_health_noRT_filtered.df %>%
+  count(word1, word2, sort = TRUE)
+#show top six
+head(globalwarming_health_noRT_networkcount.df)
+#graph word network
+# plot global warming word network
+set.seed(123)
+gw.net <- (globalwarming_health_noRT_networkcount.df %>%
+        filter(n >= 2) %>%
+        graph_from_data_frame() %>%
+        ggraph(layout = "fr") +
+        geom_edge_link(aes(edge_alpha = n, edge_width = n)) +
+        geom_node_point(color = "darkslategray4", size = 3) +
+        geom_node_text(aes(label = name), vjust = 1.8, size = 3) +
+        labs(title = "Word Network of Tweets", 
+             subtitle = "global warming & health",
+             x = "", y = ""))
+
+#top bigram
+gw.net.top <- (globalwarming_health_noRT_networkcount.df %>%
+  top_n(1)) 
+
+#Word Network for "heatillness & health"
+#Removepunctuation, convert to lowercase, add ID for each tweet. Also pair words. 
+heatillness_health_noRT_prelimpaired.df <- heatillness_health_noRT.df %>%
+  dplyr::select(stripped_text) %>%
+  unnest_tokens(paired_words, stripped_text, token = "ngrams", n = 2)
+#Bigram count
+heatillness_health_noRT_prelimpaired.df %>%
+  count(paired_words, sort = TRUE)
+#separate paired words 
+heatillness_health_noRT_separated.df <- heatillness_health_noRT_prelimpaired.df %>%
+  separate(paired_words, c("word1", "word2"), sep = " ")
+#remove stope workds 
+heatillness_health_noRT_filtered.df <- heatillness_health_noRT_separated.df %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+#new bigram count
+heatillness_health_noRT_networkcount.df <- heatillness_health_noRT_filtered.df %>%
+  count(word1, word2, sort = TRUE)
+#show top six
+head(heatillness_health_noRT_networkcount.df)
+#graph word network
+# plot heat illness word network
+set.seed(123)
+hi.net <- (heatillness_health_noRT_networkcount.df %>%
+        filter(n >= 2) %>%
+        graph_from_data_frame() %>%
+        ggraph(layout = "fr") +
+        geom_edge_link(aes(edge_alpha = n, edge_width = n)) +
+        geom_node_point(color = "darkslategray4", size = 3) +
+        geom_node_text(aes(label = name), vjust = 1.8, size = 3) +
+        labs(title = "Word Network of Tweets", 
+             subtitle = "heat illness & health",
+             x = "", y = ""))
+#top bigram
+hi.net.top <- (heatillness_health_noRT_networkcount.df %>%
+  top_n(1)) #how to get this inline R code to print better?
+```
+
+```{r fig4, include=TRUE, echo=FALSE, fig.cap="Word Network Analysis of Climate Change and Health Tweets", fig.width = 7, fig.height = 6}
+cc.net
+```
+
+
+```{r fig5, include=TRUE, echo=FALSE, fig.cap="Word Network Analysis of Global Warming and Health Tweets", fig.width = 7, fig.height = 6}
+gw.net
+```
+
+
+```{r fig6, include=TRUE, echo=FALSE, fig.cap="Word Network Analysis of Heat Illness and Health Tweets", fig.width = 7, fig.height = 6}
+hi.net
+```
+
+In Figure 4, the word network created using bi-grams of the 'Climate Change & Health' tweets is presented. The most frequent bi-gram 
+was '`r cc.net.top$word1`-`r cc.net.top$word2`' with `r cc.net.top$n` observations. In Figure 5, the word network created using bi-grams of the 'Global Warming & Health' tweets is presented. The most frequent bi-gram was '`r gw.net.top$word1`-`r gw.net.top$word2`' with `r gw.net.top$n` observations. In Figure 6, the word network created using bi grams of the 'Heat Illness & Health' tweets is presented. The most frequent bi-gram was '`r hi.net.top$word1`-`r hi.net.top$word2`' with `r hi.net.top$n` observations.
+
+### Sentiment Analysis 
+
+```{r sentiment}
+#Clean tweets for sentiment analysis 
+
+#Cleaning the climate change & health tweets
+#insepect precleaned text. 
+head(climatechange_health_noRT.df$text)
+# remove http elements from heatillness & health tweets and put into data frames for Sentiment Analysis. 
+climatechange_health_noRT_SA.df <- gsub("http.*","",  climatechange_health_noRT.df$text)
+climatechange_health_noRT_SA.df <- gsub("https.*","", climatechange_health_noRT_SA.df)
+#Remove hashtags from tweets. 
+climatechange_health_noRT_SA.df <- gsub("#.*","", climatechange_health_noRT_SA.df)
+#Remove usernames from tweets. 
+climatechange_health_noRT_SA.df <- gsub("@.*","", climatechange_health_noRT_SA.df)
+#Inspect cleaned tweets 
+head(climatechange_health_noRT_SA.df)
+#obtain sentiment score for tweets. 
+climatechange_word.df <- as.vector(climatechange_health_noRT_SA.df)
+climatechange_emotion.df <- get_nrc_sentiment(climatechange_word.df)
+climatechange_emotion.df2 <- cbind(climatechange_word.df, climatechange_emotion.df) 
+head(climatechange_emotion.df2)
+#extract sentiment score for each tweet 
+sent.value.cc <- get_sentiment(climatechange_word.df)
+#Find most positive tweet 
+most.positive.cc <- climatechange_word.df[sent.value.cc == max(sent.value.cc)]
+most.positive.cc
+#Find most negative tweet. 
+most.negative.cc <- climatechange_word.df[sent.value.cc == min(sent.value.cc)]
+most.negative.cc 
+#separate all tweets based on sentiment score
+#separate positive tweets first
+positive.tweets.cc <- climatechange_word.df[sent.value.cc > 0]
+head(positive.tweets.cc)
+#negative tweets
+negative.tweets.cc <- climatechange_word.df[sent.value.cc < 0]
+head(negative.tweets.cc)
+#neutral tweets 
+neutral.tweets.cc <- climatechange_word.df[sent.value.cc == 0]
+head(neutral.tweets.cc)
+#find total number of tweets in each category of neutral, negative, and positive. 
+category_senti_cc <- ifelse(sent.value.cc < 0, "Negative", ifelse(sent.value.cc > 0, "Positive", "Neutral"))
+head(category_senti_cc)
+#total number
+table(category_senti_cc)
+
+#Cleaning the global warming & health tweets
+#insepect precleaned text. 
+head(globalwarming_health_noRT.df$text)
+# remove http elements from heatillness & health tweets and put into data frames for Sentiment Analysis. 
+globalwarming_health_noRT_SA.df <- gsub("http.*","",  globalwarming_health_noRT.df$text)
+globalwarming_health_noRT_SA.df <- gsub("https.*","", globalwarming_health_noRT_SA.df)
+#Remove hashtags from tweets. 
+globalwarming_health_noRT_SA.df <- gsub("#.*","", globalwarming_health_noRT_SA.df)
+#Remove usernames from tweets. 
+globalwarming_health_noRT_SA.df <- gsub("@.*","", globalwarming_health_noRT_SA.df)
+#Inspect cleaned tweets 
+head(globalwarming_health_noRT_SA.df)
+#obtain sentiment score for tweets. 
+globalwarming_word.df <- as.vector(globalwarming_health_noRT_SA.df)
+globalwarming_emotion.df <- get_nrc_sentiment(globalwarming_word.df)
+globalwarming_emotion.df2 <- cbind(globalwarming_word.df, globalwarming_emotion.df) 
+head(globalwarming_emotion.df2)
+#extract sentiment score for each tweet 
+sent.value.gw <- get_sentiment(globalwarming_word.df)
+#Find most positive tweet 
+most.positive.gw <- globalwarming_word.df[sent.value.gw == max(sent.value.gw)]
+most.positive.gw
+#Find most negative tweet. 
+most.negative.gw <- globalwarming_word.df[sent.value.gw == min(sent.value.gw)]
+most.negative.gw 
+#separate all tweets based on sentiment score
+#separate positive tweets first
+positive.tweets.gw <- globalwarming_word.df[sent.value.gw > 0]
+head(positive.tweets.gw)
+#negative tweets
+negative.tweets.gw <- globalwarming_word.df[sent.value.gw < 0]
+head(negative.tweets.gw)
+#neutral tweets 
+neutral.tweets.gw <- globalwarming_word.df[sent.value.gw == 0]
+head(neutral.tweets.gw)
+#find total number of tweets in each category of neutral, negative, and positive. 
+category_senti_gw <- ifelse(sent.value.gw < 0, "Negative", ifelse(sent.value.gw > 0, "Positive", "Neutral"))
+head(category_senti_gw)
+#total number
+table(category_senti_gw)
+
+ 
+#Cleaning the heatillness & health tweets
+#insepect precleaned text. 
+head(heatillness_health_noRT.df$text)
+# remove http elements from heatillness & health tweets and put into data frames for Sentiment Analysis. 
+heatillness_health_noRT_SA.df <- gsub("http.*","",  heatillness_health_noRT.df$text)
+heatillness_health_noRT_SA.df <- gsub("https.*","", heatillness_health_noRT_SA.df)
+#Remove hashtags from tweets. 
+heatillness_health_noRT_SA.df <- gsub("#.*","", heatillness_health_noRT_SA.df)
+#Remove usernames from tweets. 
+heatillness_health_noRT_SA.df <- gsub("@.*","", heatillness_health_noRT_SA.df)
+#Inspect cleaned tweets 
+head(heatillness_health_noRT_SA.df)
+#obtain sentiment score for tweets. 
+heatillness_word.df <- as.vector(heatillness_health_noRT_SA.df)
+heatillness_emotion.df <- get_nrc_sentiment(heatillness_word.df)
+heatillness_emotion.df2 <- cbind(heatillness_word.df, heatillness_emotion.df) 
+head(heatillness_emotion.df2)
+#extract sentiment score for each tweet 
+sent.value.hri <- get_sentiment(heatillness_word.df)
+#Find most positive tweet 
+most.positive.hri <- heatillness_word.df[sent.value.hri == max(sent.value.hri)]
+most.positive.hri
+#Find most negative tweet. 
+most.negative.hri <- heatillness_word.df[sent.value.hri == min(sent.value.hri)]
+most.negative.hri 
+#separate all tweets based on sentiment score
+#separate positive tweets first
+positive.tweets.hri <- heatillness_word.df[sent.value.hri > 0]
+head(positive.tweets.hri)
+#negative tweets
+negative.tweets.hri <- heatillness_word.df[sent.value.hri < 0]
+head(negative.tweets.hri)
+#neutral tweets 
+neutral.tweets.hri <- heatillness_word.df[sent.value.hri == 0]
+head(neutral.tweets.hri)
+#find total number of tweets in each category of neutral, negative, and positive. 
+category_senti_hri <- ifelse(sent.value.hri < 0, "Negative", ifelse(sent.value.hri > 0, "Positive", "Neutral"))
+head(category_senti_hri)
+#total number
+table(category_senti_hri)
+
+#pie chart of climate change sentiment tweets HRI and Helath 
+cc.pie <- table(category_senti_cc)
+#calculcate precent of Pos, Neg, Neutral of Tweets 
+cc.percent <- round(100*cc.pie/sum(cc.pie))
+#add Pos, Neg, Neutral
+score.cc <- paste(names(cc.pie), cc.percent, sep=" ")
+#add percent sign
+score.cc <- paste(score.cc, "%", sep="")
+#see below for output 
+
+#pie chart of climate change sentiment tweets HRI and Helath 
+gw.pie <- table(category_senti_gw)
+#calculcate precent of Pos, Neg, Neutral of Tweets 
+gw.percent <- round(100*gw.pie/sum(gw.pie))
+#add Pos, Neg, Neutral
+score.gw <- paste(names(gw.pie), gw.percent, sep=" ")
+#add percent sign
+score.gw <- paste(score.gw, "%", sep="")
+#see below for output
+
+#pie chart of climate change sentiment tweets HRI and Helath 
+hri.pie <- table(category_senti_hri)
+#calculcate precent of Pos, Neg, Neutral of Tweets 
+hri.percent <- round(100*hri.pie/sum(hri.pie))
+#add Pos, Neg, Neutral
+score.hri <- paste(names(hri.pie), hri.percent, sep=" ")
+#add percent sign
+score.hri <- paste(score.hri, "%", sep="")
+#see below for output
+```
+
+```{r fig7, include=TRUE, echo=FALSE, fig.cap="Pie Chart of CC Sentiment", fig.width = 5, fig.height = 4}
+pie(cc.pie, labels = score.cc, main ="Sentiment of Climate Change & Health Tweets")
+```
+
+```{r fig8, include=TRUE, echo=FALSE, fig.cap="Pie Chart of GW Sentiment", fig.width = 5, fig.height = 4}
+pie(gw.pie, labels = score.gw, main ="Sentiment of Global Warming & Health Tweets")
+```
+
+```{r fig9, include=TRUE, echo=FALSE, fig.cap="Pie Chart of HRI Sentiment", fig.width = 5, fig.height = 4}
+pie(hri.pie, labels = score.hri, main ="Sentiment of Heat Illness & Health Tweets")
+```
+
+### Latent Sentiment Analysis 
+
+```{r LSA, fig.width = 5, fig.height = 4}
+#clean tweets to make corpus
+#Cleaning the climate change & health tweets
+# remove http elements from heatillness & health tweets
+climatechange_health_noRT.df$stripped_text <- gsub("http.*","",  climatechange_health_noRT.df$text)
+climatechange_health_noRT.df$stripped_text <- gsub("https.*","",  climatechange_health_noRT.df$text)
+cc.corpus <- climatechange_health_noRT.df
+#save as .txt
+write.table(cc.corpus,"climatechange.txt",sep="\t",row.names=FALSE)
+#make corpus
+corpus <- Corpus(VectorSource(cc.corpus))
+#create stopword vector 
+stoplist <-c(stopwords("en"), "xx", "xxxx","xx/xx/xxxx","xxxx/xxxx/", "xxxxxxxxxxxx","xxxxxxxx")
+#Create Term Document Matrix
+tdm <- TermDocumentMatrix(corpus,
+control=list(removePunctuation = TRUE, removeNumbers = TRUE,
+tolower = TRUE,
+stopwords = stoplist,
+stemming = TRUE, # snowball stemmer
+weighting = function(x) weightTfIdf(x, normalize = FALSE))) # Keep only 5 or more appearances, to accelerate
+#the matrix is very sparse
+tdm
+#find term frequencies 
+findFreqTerms(tdm, 300)
+#further analysis of the word "climate"
+myLSAspace <- lsa(tdm, dims=dimcalc_share())
+dim(myLSAspace$tk)  # Check how many rows/columns the tk matrix has  
+myLSAtk = t(myLSAspace$sk * t(myLSAspace$tk)) 
+plot_neighbors("health",n=30,tvectors=myLSAtk[,1:2])  # Use only the first 2 dimensions 
+#heatmap time 
+#extract closest words to health 
+words <- neighbors("health", n=30, tvectors=myLSAtk[,1:2])
+#extract words and find the distances in space. 
+myCosineSpace2 <- multicos(names(words), tvectors= myLSAtk[,1:2], breakdown=TRUE)
+heatmap.2(myCosineSpace2)
+```
+
+In figure 10, The results of latent sentiment analysis of the climate change and health tweets is presented. 
+
+```{r fig10, include=TRUE, echo=FALSE, fig.cap="Heat Map of Climate Change and Health Tweets", fig.width = 5, fig.height = 4}
+heatmap.2(myCosineSpace2)
+```
+
+## Discussion
+
+Whe pulling tweets from Twitter's standard API, common terms and phrases should be used. In this analysis, the most tweets originated using the phrase 'climate change and health' and the least tweets originated from 'heat illness and health'. This results indicates that more Twitter users are discusing the interaction of climate change and health and not the interaction between heat-related illness and health. One possible explanation is that 'climate climate' has become a buzzword in contemporary discourse and is a 'hot topic' for researchers across multiple disciplines[@barnes2013; @uguru2011]. Therefore, a topic such as heat-related-illness, which is used as an indicator of climate change [@EPA2016], that does not carry the same 'buzzword status' is likely to be less discussed than topics that are commonly considered as buzzwords. Analysis of the 'heat illness & health' tweets is limited across this project due to there being only being `r nrow(heatillness_health.df)` tweets pulled form twitter. However, if access to the premium API were had, a Twitter exploration of lesser discussed topics such as 'heat illness' or 'chronic kidney disease of unknown etiology' could potentially be completed. 
+
+When considering the term frequency of tweets returned during the three different searches it is unsurprising that the keywords used for each search were the most frequent terms. This patter was found across all three tweet groups with the words 'climate', 'change', and 'health' appearing most frequently for the 'climate change and health' tweets; the words 'global', 'warming', and 'health' appearing most frequently for the 'global warming and health' tweets; and the words 'heat', 'related', 'illness', and 'health' appearing most frequently for the 'heat related illness and health' tweets. The main purpose of analyzing the top terms from the tweets is to verify that the correct tweets were pulled from twitter.  
+
+For the sentiment analysis, the results were suprising. The terms 'climate change', 'global warming', and 'heat related illness' often carry negative connotations. It has even been suggested in the popular media that when discussing the topics of climate change and global warming that these terms are not used in order to avoid the negative connotation and political factors associated with the terms [@Aubuchon2018]. The results of sentiment analysis for the 'climate change & health' tweets returend that 82% of tweets were considered either positive or neutral; the 'global warming & health' tweets were 79% either positive or netural; and the 'heat illness & health' tweets were only 40% neutral and had no positive tweets. Given that 'climate change' and 'global warming' are both terms that often carry negative connotations, the findings of approximately 8 out of 10 tweets being considered as either positive or neutral is noteworthy. The tweets on 'heat illness & health' suffer from a low n and the findings that none of these tweets are considered positive should be considered with caution. 
+
+Using network analysis, multiple tangential topics from 'climate change & health' and 'global warming & health' appeared. For example, in the 'climate change & health' a network appears of 'lindseygrahamsc-realdonaldtrump-foxandfriends', which proivde insight into the political nature of climate change. Other networks that appeared in the 'cliamte change & health' tweets included 'loss-biodiversity-degredation-land', 'emergencies-national-emergency' and 'meatless-mondays'. For the 'global warming & health' tweets topics that appeared included 'white-nationalism', 'fear-mongering', 'renewable-energy', 'water-shortage'. and 'realdonaldtrump-foxandfriends'. Each of these networks provides a distinct insight into the set of tweets and helps build a complete picture of the interactions of climate change and global warming with health. Additionally, using latent sentiment analysis, the words that are connected to health can also be further analyzed using heatmap. The heat map as the one produced in this analysis, provides the correlation between the nearest neighboring words to the word of interest (in this case, health) and adds additional quantitative evidence of the importance of the connections between words. For this study, only the 'climate change & health tweets' were analyzed using latent sentiment analysis. Figure (INSERT NUMBER HERE), shows the 20 closest words to health in the tweet set. By focusing on the areas in red (or the highest correlations), the words research, good, pollut(ion), talk, will, cnn, and chang(e) were found to be the most important to health in the set of tweets about 'climate change & health'. 
+
+Being able to visualize topics that are on the periphery of keywords (i.e. climate change and health; global warming and health) through network analysis as well as using a focused analysis of words correlated with the term 'health' through latenet sentiment analysis has several implications for nursing research. Given that the world in which we live is becoming increasingly reliant on digital technology [@Smith2017], nursing researchers can turn to twitter as a tool of theory developement for studies. Now, this is not to say that a twitter analysis can completely replace the tried and true methods for developing middle-range theory. However, twitter can aid in the development of theories by highlighting important secondary topics that surround the primary topic of interest and providing a detailed view of words related to the primary topic of interest. By using two different approaches for tweet analysis (word network analysis and latent sentiment analysis), there are multiple lines of evidence for including a certain topic in a theory. For example, in the 'climate change & health tweets' the idea of 'politics' appears through the 'lindseygrahamsc-realdonaldtrump-foxandfriends' network in the word network and through 'CNN' appearing as one of the closest words to health in this set of tweets. While the politics behind climater change are fairly well establish [@bolin2007; @harrison2007], if the collected tweets were from a developing area of nursing researcher this would give researchers evidence and support for potentially including new concepts/ideas in their theoretical frameworks. 
+
+In conlcusion, using twitter as a tool for nursing research is both feasible and practical. As completed in this project, tweet analysis allows for the visulaization of words and ideas that are being used as part of the discourse around a given topic. Nurses can utilize twitter in theory development or as a stand alone project. However, as expressed in @Sinnenberg2017, the use of twitter in health research is not limited to an analysis of concepts such as this project. Thus, nursing researchers should become familiar with twitter as an essential tool for conducting nursing research that can be adapted to a range of projects. 
+
+## References
